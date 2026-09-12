@@ -1,0 +1,26 @@
+name: List S3 Buckets
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write #This is required for requesting the JWT
+  contents: read #This is required for requesting the actions/checkout
+
+jobs:
+  list-buckets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: List S3 buckets
+        run: |
+          echo "Listing S3 buckets"
+          aws s3 ls
