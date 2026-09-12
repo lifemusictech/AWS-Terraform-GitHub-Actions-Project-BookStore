@@ -1,24 +1,32 @@
-name: List S3 Buckets
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
 permissions:
-  id-token: write #This is required for requesting the JWT.
-  contents: read #This is required for requesting the actions/checkout.
+  id-token: write
+  contents: read
 
 jobs:
   list-buckets:
     runs-on: ubuntu-latest
+
     steps:
 
       - name: Debug OIDC claims
-        uses: github/actions-oidc-debugger@main
-        with:
-          audience: sts.amazonaws.com
+        shell: bash
+        run: |
+          TOKEN=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" \
+            | jq -r '.value')
+
+          PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2)
+
+          echo "$PAYLOAD" | base64 -d 2>/dev/null | jq '{
+            sub,
+            aud,
+            repository,
+            repository_owner,
+            ref,
+            event_name,
+            environment
+          }'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6.2.4
@@ -27,6 +35,4 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: List S3 buckets
-        run: |
-          echo "Listing S3 buckets"
-          aws s3 ls
+        run: aws s3 ls
